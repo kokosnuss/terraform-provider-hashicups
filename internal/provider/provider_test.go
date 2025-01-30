@@ -14,7 +14,7 @@ const (
 provider "hashicups" {
   username = "education"
   password = "test123"
-  host     = "http://localhost:19090"
+  host     = "http://localhost:9090"
 }
 `
 )

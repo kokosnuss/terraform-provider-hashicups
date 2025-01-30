@@ -37,7 +37,6 @@ type coffeesModel struct {
 	ID          types.Int64               `tfsdk:"id"`
 	Name        types.String              `tfsdk:"name"`
 	Teaser      types.String              `tfsdk:"teaser"`
-	Description types.String              `tfsdk:"description"`
 	Price       types.Float64             `tfsdk:"price"`
 	Image       types.String              `tfsdk:"image"`
 	Ingredients []coffeesIngredientsModel `tfsdk:"ingredients"`
@@ -45,7 +44,10 @@ type coffeesModel struct {
 
 // coffeesIngredientsModel maps coffee ingredients data
 type coffeesIngredientsModel struct {
-	ID types.Int64 `tfsdk:"id"`
+	IngredientId types.Int64  `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Quantity     types.Int64  `tfsdk:"quantity"`
+	Unit         types.String `tfsdk:"unit"`
 }
 
 // Metadata returns the data source type name.
@@ -79,10 +81,6 @@ func (d *coffeesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "Fun tagline for the coffee.",
 							Computed:    true,
 						},
-						"description": schema.StringAttribute{
-							Description: "Product description of the coffee.",
-							Computed:    true,
-						},
 						"price": schema.Float64Attribute{
 							Description: "Suggested cost of the coffee.",
 							Computed:    true,
@@ -98,6 +96,18 @@ func (d *coffeesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 								Attributes: map[string]schema.Attribute{
 									"id": schema.Int64Attribute{
 										Description: "Numeric identifier of the coffee ingredient.",
+										Computed:    true,
+									},
+									"name": schema.StringAttribute{
+										Description: "Name of the coffee ingredient.",
+										Computed:    true,
+									},
+									"quantity": schema.Int64Attribute{
+										Description: "Quantity of the coffee ingredient.",
+										Computed:    true,
+									},
+									"unit": schema.StringAttribute{
+										Description: "Quantity of the coffee ingredient.",
 										Computed:    true,
 									},
 								},
@@ -126,17 +136,19 @@ func (d *coffeesDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Map response body to model
 	for _, coffee := range coffees {
 		coffeeState := coffeesModel{
-			ID:          types.Int64Value(int64(coffee.ID)),
-			Name:        types.StringValue(coffee.Name),
-			Teaser:      types.StringValue(coffee.Teaser),
-			Description: types.StringValue(coffee.Description),
-			Price:       types.Float64Value(coffee.Price),
-			Image:       types.StringValue(coffee.Image),
+			ID:     types.Int64Value(int64(coffee.ID)),
+			Name:   types.StringValue(coffee.Name),
+			Teaser: types.StringValue(coffee.Teaser),
+			Price:  types.Float64Value(coffee.Price),
+			Image:  types.StringValue(coffee.Image),
 		}
 
 		for _, ingredient := range coffee.Ingredient {
 			coffeeState.Ingredients = append(coffeeState.Ingredients, coffeesIngredientsModel{
-				ID: types.Int64Value(int64(ingredient.ID)),
+				IngredientId: types.Int64Value(int64(ingredient.ID)),
+				Unit:         types.StringValue(ingredient.Unit),
+				Name:         types.StringValue(ingredient.Name),
+				Quantity:     types.Int64Value(int64(ingredient.Quantity)),
 			})
 		}
 

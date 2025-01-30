@@ -1,6 +1,10 @@
 module terraform-provider-hashicups
 
-go 1.19
+go 1.22.7
+
+toolchain go1.23.2
+
+replace github.com/hashicorp-demoapp/hashicups-client-go => ./hashicups-client-go
 
 require (
 	github.com/hashicorp-demoapp/hashicups-client-go v0.1.0

@@ -35,6 +35,23 @@ resource "hashicups_coffee" "test" {
 			},
 			// ImportState testing
 			// Update and Read testing
+			{
+				Config: providerConfig + `
+resource "hashicups_coffee" "test" {
+  name = "terraspiced latte 2"
+  teaser = "exclusively for techdays 2025"
+  price = 150
+  image = "/terraform.png"
+  ingredients = [{
+    name = "Espresso"
+    quantity = 50
+	unit = "ml"
+    },
+]
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(),
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})

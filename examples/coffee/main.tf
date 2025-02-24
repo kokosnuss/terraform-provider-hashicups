@@ -16,17 +16,13 @@ provider "hashicups" {
 resource "hashicups_coffee" "edu" {
   name   = "Double Coffee"
   teaser = "For my roMAN"
-  price  = 250
-  image  = "/vault.png"
+  price  = 150
+  image  = "/terraform.png"
   ingredients = [{
     name     = "Espresso"
     quantity = 50
     unit     = "ml"
     },
-    {
-      name     = "Steamed Milk"
-      quantity = 90
-      unit     = "ml"
-  }]
+  ]
 }
 

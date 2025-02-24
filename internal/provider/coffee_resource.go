@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/hashicorp-demoapp/hashicups-client-go"
@@ -195,13 +196,59 @@ func (r *coffeeResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 func (r *coffeeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
+	var state coffeeResourceModel
 	var plan coffeeResourceModel
 	diags := req.Plan.Get(ctx, &plan)
+	// Get current ingredients and set to null if not present in plan
+	req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	id, _ := strconv.Atoi(plan.ID.ValueString())
+	hashiCoffe := hashicups.Coffee{
+		ID:     id,
+		Name:   plan.Name.ValueString(),
+		Teaser: plan.Teaser.ValueString(),
+		Price:  float64(plan.Price.ValueInt64()),
+		Image:  plan.Image.ValueString(),
+	}
+	c, err := r.client.UpdateCoffee(hashiCoffe)
+	if err != nil {
+		resp.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+
+	for _, stateIngredient := range state.Ingredients {
+		planIndex := slices.IndexFunc(plan.Ingredients, func(i ingredientModel) bool { return i.Name == stateIngredient.Name })
+		var ingredientToUse *ingredientModel
+		if planIndex < 0 {
+			ingredientToUse = &stateIngredient
+			ingredientToUse.Quantity = types.Float64Value(0)
+		} else {
+			ingredientToUse = &plan.Ingredients[planIndex]
+		}
+
+		hashiIngredient := hashicups.Ingredient{
+			Name:     ingredientToUse.Name.ValueString(),
+			Quantity: int(ingredientToUse.Quantity.ValueFloat64()),
+			Unit:     ingredientToUse.Unit.ValueString(),
+		}
+		hi, err := r.client.CreateCoffeeIngredient(*c, hashiIngredient)
+		if err == nil {
+			fmt.Printf("hi: %v\n", hi)
+		} else {
+			resp.Diagnostics.AddError(err.Error(), err.Error())
+			return
+		}
+		// ingredientToUse.IngredientID = types.Int64Value(int64(hi.ID))
+	}
+
+	fmt.Printf("c: %v\n", c)
+
+	// Set state to fully populated data
+	plan.ID = types.StringValue(strconv.Itoa(c.ID))
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

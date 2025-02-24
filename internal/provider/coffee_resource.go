@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/hashicorp-demoapp/hashicups-client-go"
@@ -218,19 +219,32 @@ func (r *coffeeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	for _, ingredient := range plan.Ingredients {
+
+	for _, stateIngredient := range state.Ingredients {
+		planIndex := slices.IndexFunc(plan.Ingredients, func(i ingredientModel) bool { return i.Name == stateIngredient.Name })
+		var ingredientToUse *ingredientModel
+		if planIndex < 0 {
+			ingredientToUse = &stateIngredient
+			ingredientToUse.Quantity = types.Float64Value(0)
+		} else {
+			ingredientToUse = &plan.Ingredients[planIndex]
+		}
+
 		hashiIngredient := hashicups.Ingredient{
-			Name:     ingredient.Name.ValueString(),
-			Quantity: int(ingredient.Quantity.ValueFloat64()),
-			Unit:     ingredient.Unit.ValueString(),
+			Name:     ingredientToUse.Name.ValueString(),
+			Quantity: int(ingredientToUse.Quantity.ValueFloat64()),
+			Unit:     ingredientToUse.Unit.ValueString(),
 		}
 		hi, err := r.client.CreateCoffeeIngredient(*c, hashiIngredient)
-		if err != nil {
+		if err == nil {
+			fmt.Printf("hi: %v\n", hi)
+		} else {
 			resp.Diagnostics.AddError(err.Error(), err.Error())
 			return
 		}
-		ingredient.IngredientID = types.Int64Value(int64(hi.ID))
+		// ingredientToUse.IngredientID = types.Int64Value(int64(hi.ID))
 	}
+
 	fmt.Printf("c: %v\n", c)
 
 	// Set state to fully populated data

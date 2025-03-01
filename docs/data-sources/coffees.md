@@ -30,7 +30,6 @@ data "hashicups_coffees" "all" {}
 
 Read-Only:
 
-- `description` (String) Product description of the coffee.
 - `id` (Number) Numeric identifier of the coffee.
 - `image` (String) URI for an image of the coffee.
 - `ingredients` (Attributes List) List of ingredients in the coffee. (see [below for nested schema](#nestedatt--coffees--ingredients))
@@ -44,3 +43,6 @@ Read-Only:
 Read-Only:
 
 - `id` (Number) Numeric identifier of the coffee ingredient.
+- `name` (String) Name of the coffee ingredient.
+- `quantity` (Number) Quantity of the coffee ingredient.
+- `unit` (String) Quantity of the coffee ingredient.

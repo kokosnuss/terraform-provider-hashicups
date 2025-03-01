@@ -42,7 +42,7 @@ type coffeesModel struct {
 	Ingredients []coffeesIngredientsModel `tfsdk:"ingredients"`
 }
 
-// coffeesIngredientsModel maps coffee ingredients data
+// coffeesIngredientsModel maps coffee ingredients data.
 type coffeesIngredientsModel struct {
 	IngredientId types.Int64  `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`

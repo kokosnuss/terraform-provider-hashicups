@@ -17,6 +17,8 @@ func TestAccCoffeeResource(t *testing.T) {
 				resource "hashicups_coffee" "test" {
 				name = "terraspiced latte"
 				teaser = "exclusively for techdays 2025"
+				collection = "New Arrivals"
+  				origin = "Techdays 2025"
 				price = 150
 				image = "/terraform.png"
 				ingredients = [{
@@ -61,7 +63,7 @@ func TestAccCoffeeResource(t *testing.T) {
 				resource "hashicups_coffee" "test" {
 				name = "terraspiced coffein booster"
 				teaser = "exclusively for techdays 2025"
-				price = 250
+				price = 150
 				image = "/terraform.png"
 				ingredients = [{
 					name = "Espresso"

@@ -28,6 +28,27 @@ func (c *Client) GetCoffees() ([]Coffee, error) {
 	return coffees, nil
 }
 
+// GetGoffee - Returns a specific coffee entry (no auth required)
+func (c *Client) GetCoffee(coffeeID string) (*Coffee, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/coffees/%s", c.HostURL, coffeeID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := c.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	coffee := []Coffee{}
+	err = json.Unmarshal(body, &coffee)
+	if err != nil {
+		return nil, err
+	}
+
+	return &coffee[0], nil
+}
+
 // GetCoffeeIngredients - Returns list of coffee ingredients (no auth required)
 func (c *Client) GetCoffeeIngredients(coffeeID string) ([]Ingredient, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/coffees/%s/ingredients", c.HostURL, coffeeID), nil)

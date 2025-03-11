@@ -143,10 +143,12 @@ func (r *coffeeResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	hashiCoffee := hashicups.Coffee{
-		Name:   plan.Name.ValueString(),
-		Teaser: plan.Teaser.ValueString(),
-		Price:  float64(plan.Price.ValueInt64()),
-		Image:  plan.Image.ValueString(),
+		Name:       plan.Name.ValueString(),
+		Teaser:     plan.Teaser.ValueString(),
+		Origin:     plan.Origin.ValueString(),
+		Collection: plan.Collection.ValueString(),
+		Price:      float64(plan.Price.ValueInt64()),
+		Image:      plan.Image.ValueString(),
 	}
 	c, err := r.client.CreateCoffee(hashiCoffee)
 	if err != nil {
@@ -238,11 +240,13 @@ func (r *coffeeResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	id, _ := strconv.Atoi(plan.ID.ValueString())
 	hashiCoffe := hashicups.Coffee{
-		ID:     id,
-		Name:   plan.Name.ValueString(),
-		Teaser: plan.Teaser.ValueString(),
-		Price:  float64(plan.Price.ValueInt64()),
-		Image:  plan.Image.ValueString(),
+		ID:         id,
+		Name:       plan.Name.ValueString(),
+		Teaser:     plan.Teaser.ValueString(),
+		Price:      float64(plan.Price.ValueInt64()),
+		Image:      plan.Image.ValueString(),
+		Origin:     plan.Origin.ValueString(),
+		Collection: plan.Collection.ValueString(),
 	}
 	c, err := r.client.UpdateCoffee(hashiCoffe)
 	if err != nil {

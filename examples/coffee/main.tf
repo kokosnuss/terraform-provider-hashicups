@@ -14,14 +14,21 @@ provider "hashicups" {
 }
 
 resource "hashicups_coffee" "edu" {
-  name   = "Double Espresso"
-  teaser = "Double Espresso"
-  price  = 150
-  image  = "/terraform.png"
+  name       = "Atruvia Terraform Boost"
+  teaser     = "Double Espresso"
+  collection = "New Arrivals"
+  origin     = "Techdays 2025"
+  price      = 150
+  image      = "/terraform.png"
   ingredients = [{
-    name     = "Espresso2"
-    quantity = 100
+    name     = "Espresso"
+    quantity = 200
     unit     = "ml"
+    },
+    {
+      name     = "Pumpkin Spice"
+      quantity = 10
+      unit     = "g"
     },
   ]
 }

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"regexp"
 	"terraform-provider-hashicups/internal/provider/test/helper"
 	"testing"
 
@@ -54,6 +55,30 @@ func TestCreateEmptyCoffeeAndAddIngredients(t *testing.T) {
 					resource.TestCheckResourceAttr("hashicups_coffee.test", "ingredients.0.name", "Espresso"),
 					resource.TestCheckResourceAttr("hashicups_coffee.test", "ingredients.1.name", "Steamed Milk"),
 				),
+			},
+		},
+	})
+}
+
+func TestWrongIngredients(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig + `
+				resource "hashicups_coffee" "test" {
+					name = "terraspiced latte"
+					teaser = "exclusively for techdays 2025"
+					price = 150
+					image = "/terraform.png"
+					ingredients = [{
+						name = "Steamed Milk2"
+						quantity = 100
+						unit = "ml"
+					}]
+
+				}`,
+				ExpectError: regexp.MustCompile("Error running apply"),
 			},
 		},
 	})

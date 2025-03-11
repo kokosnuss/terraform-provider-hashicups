@@ -153,23 +153,26 @@ func (r *coffeeResource) Create(ctx context.Context, req resource.CreateRequest,
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	for _, ingredient := range plan.Ingredients {
+	// Add coffee to state
+	plan.ID = types.StringValue(strconv.Itoa(c.ID))
+	diags = resp.State.Set(ctx, plan)
+
+	for i, _ := range plan.Ingredients {
 		hashiIngredient := hashicups.Ingredient{
-			Name:     ingredient.Name.ValueString(),
-			Quantity: int(ingredient.Quantity.ValueFloat64()),
-			Unit:     ingredient.Unit.ValueString(),
+			Name:     plan.Ingredients[i].Name.ValueString(),
+			Quantity: int(plan.Ingredients[i].Quantity.ValueFloat64()),
+			Unit:     plan.Ingredients[i].Unit.ValueString(),
 		}
 		hi, err := r.client.CreateCoffeeIngredient(*c, hashiIngredient)
 		if err != nil {
 			resp.Diagnostics.AddError(err.Error(), err.Error())
 			return
 		}
-		ingredient.IngredientID = types.Int64Value(int64(hi.ID))
+		plan.Ingredients[i].IngredientID = types.Int64Value(int64(hi.ID))
 	}
 	tflog.Info(ctx, fmt.Sprintf("c: %v", c))
 
-	// Set state to fully populated data
-	plan.ID = types.StringValue(strconv.Itoa(c.ID))
+	// Add everything else to state
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

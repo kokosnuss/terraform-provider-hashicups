@@ -157,9 +157,9 @@ func (r *coffeeResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	// Add coffee to state
 	plan.ID = types.StringValue(strconv.Itoa(c.ID))
-	diags = resp.State.Set(ctx, plan)
+	resp.State.Set(ctx, plan)
 
-	for i, _ := range plan.Ingredients {
+	for i := range plan.Ingredients {
 		hashiIngredient := hashicups.Ingredient{
 			Name:     plan.Ingredients[i].Name.ValueString(),
 			Quantity: int(plan.Ingredients[i].Quantity.ValueFloat64()),

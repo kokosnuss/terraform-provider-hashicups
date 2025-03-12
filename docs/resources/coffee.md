@@ -44,5 +44,8 @@ Required:
 
 Optional:
 
-- `ingredient_id` (Number) Identifier of the ingredient.
 - `name` (String) Name of the ingredient.
+
+Read-Only:
+
+- `ingredient_id` (Number) Identifier of the ingredient.

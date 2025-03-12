@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -110,7 +111,7 @@ func (r *coffeeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					Attributes: map[string]schema.Attribute{
 						"ingredient_id": schema.Int64Attribute{
 							Description: "Identifier of the ingredient.",
-							Optional:    true,
+							Computed:    true,
 						},
 						"name": schema.StringAttribute{
 							Description: "Name of the ingredient.",
@@ -141,7 +142,7 @@ func (r *coffeeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	hashiCoffe := hashicups.Coffee{
+	hashiCoffee := hashicups.Coffee{
 		Name:       plan.Name.ValueString(),
 		Teaser:     plan.Teaser.ValueString(),
 		Origin:     plan.Origin.ValueString(),
@@ -149,28 +150,31 @@ func (r *coffeeResource) Create(ctx context.Context, req resource.CreateRequest,
 		Price:      float64(plan.Price.ValueInt64()),
 		Image:      plan.Image.ValueString(),
 	}
-	c, err := r.client.CreateCoffee(hashiCoffe)
+	c, err := r.client.CreateCoffee(hashiCoffee)
 	if err != nil {
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	for _, ingredient := range plan.Ingredients {
+	// Add coffee to state
+	plan.ID = types.StringValue(strconv.Itoa(c.ID))
+	resp.State.Set(ctx, plan)
+
+	for i := range plan.Ingredients {
 		hashiIngredient := hashicups.Ingredient{
-			Name:     ingredient.Name.ValueString(),
-			Quantity: int(ingredient.Quantity.ValueFloat64()),
-			Unit:     ingredient.Unit.ValueString(),
+			Name:     plan.Ingredients[i].Name.ValueString(),
+			Quantity: int(plan.Ingredients[i].Quantity.ValueFloat64()),
+			Unit:     plan.Ingredients[i].Unit.ValueString(),
 		}
 		hi, err := r.client.CreateCoffeeIngredient(*c, hashiIngredient)
 		if err != nil {
 			resp.Diagnostics.AddError(err.Error(), err.Error())
 			return
 		}
-		ingredient.IngredientID = types.Int64Value(int64(hi.ID))
+		plan.Ingredients[i].IngredientID = types.Int64Value(int64(hi.ID))
 	}
-	fmt.Printf("c: %v\n", c)
+	tflog.Info(ctx, fmt.Sprintf("c: %v", c))
 
-	// Set state to fully populated data
-	plan.ID = types.StringValue(strconv.Itoa(c.ID))
+	// Add everything else to state
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -187,7 +191,33 @@ func (r *coffeeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	c, err := r.client.GetCoffee(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
 
+	ingredients, err := r.client.GetCoffeeIngredients(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+
+	stateIngrediens := []ingredientModel{}
+	for _, ingredient := range ingredients {
+
+		stateIngrediens = append(stateIngrediens, ingredientModel{
+			IngredientID: types.Int64Value(int64(ingredient.ID)),
+			Name:         types.StringValue(ingredient.Name),
+			Quantity:     types.Float64Value(float64(ingredient.Quantity)),
+			Unit:         types.StringValue(ingredient.Unit),
+		})
+
+	}
+
+	state.Ingredients = stateIngrediens
+
+	state.ID = types.StringValue(strconv.Itoa(c.ID))
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -224,32 +254,23 @@ func (r *coffeeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	for _, stateIngredient := range state.Ingredients {
-		planIndex := slices.IndexFunc(plan.Ingredients, func(i ingredientModel) bool { return i.Name == stateIngredient.Name })
-		var ingredientToUse *ingredientModel
-		if planIndex < 0 {
-			ingredientToUse = &stateIngredient
-			ingredientToUse.Quantity = types.Float64Value(0)
-		} else {
-			ingredientToUse = &plan.Ingredients[planIndex]
-		}
-
-		hashiIngredient := hashicups.Ingredient{
-			Name:     ingredientToUse.Name.ValueString(),
-			Quantity: int(ingredientToUse.Quantity.ValueFloat64()),
-			Unit:     ingredientToUse.Unit.ValueString(),
-		}
+	collectedIngredients := r.CollectIngredientModels(ctx, state.Ingredients, plan.Ingredients)
+	for _, hashiIngredient := range collectedIngredients {
 		hi, err := r.client.CreateCoffeeIngredient(*c, hashiIngredient)
-		if err == nil {
-			fmt.Printf("hi: %v\n", hi)
-		} else {
+		if err != nil {
 			resp.Diagnostics.AddError(err.Error(), err.Error())
 			return
 		}
-		// ingredientToUse.IngredientID = types.Int64Value(int64(hi.ID))
+		tflog.Info(ctx, fmt.Sprintf("hi: %v\n", hi))
+
+		planIndex := slices.IndexFunc(plan.Ingredients, func(i ingredientModel) bool { return i.Name == types.StringValue(hi.Name) })
+		if planIndex > -1 {
+			plan.Ingredients[planIndex].IngredientID = types.Int64Value(int64(hi.ID))
+		}
+
 	}
 
-	fmt.Printf("c: %v\n", c)
+	tflog.Info(ctx, fmt.Sprintf("c: %v", c))
 
 	// Set state to fully populated data
 	plan.ID = types.StringValue(strconv.Itoa(c.ID))
@@ -303,4 +324,43 @@ func (r *coffeeResource) Configure(_ context.Context, req resource.ConfigureRequ
 func (r *coffeeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Retrieve import ID and save to id attribute
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func (r *coffeeResource) CollectIngredientModels(ctx context.Context, stateIngredients, planIngredients []ingredientModel) []hashicups.Ingredient {
+
+	collectedIngredients := []hashicups.Ingredient{}
+	for _, stateIngredient := range stateIngredients {
+		planIndex := slices.IndexFunc(planIngredients, func(i ingredientModel) bool { return i.Name == stateIngredient.Name })
+		var ingredientToUse *ingredientModel
+		if planIndex < 0 {
+			// Delete
+			ingredientToUse = &stateIngredient
+			ingredientToUse.Quantity = types.Float64Value(0)
+		} else {
+			// Update
+			ingredientToUse = &planIngredients[planIndex]
+		}
+
+		collectedIngredients = append(collectedIngredients, hashicups.Ingredient{
+			Name:     ingredientToUse.Name.ValueString(),
+			Quantity: int(ingredientToUse.Quantity.ValueFloat64()),
+			Unit:     ingredientToUse.Unit.ValueString(),
+		})
+	}
+
+	// Create New Ingredients
+	for _, planIngredient := range planIngredients {
+		stateIndex := slices.IndexFunc(stateIngredients, func(i ingredientModel) bool { return i.Name == planIngredient.Name })
+		if stateIndex > 0 {
+			// We handled this one already
+			continue
+		}
+		collectedIngredients = append(collectedIngredients, hashicups.Ingredient{
+			Name:     planIngredient.Name.ValueString(),
+			Quantity: int(planIngredient.Quantity.ValueFloat64()),
+			Unit:     planIngredient.Unit.ValueString(),
+		})
+	}
+
+	return collectedIngredients
 }
